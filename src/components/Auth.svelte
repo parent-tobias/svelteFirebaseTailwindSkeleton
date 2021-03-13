@@ -1,156 +1,81 @@
-<script lang='ts'>
-  import {createEventDispatcher} from 'svelte';
-  import {fade} from 'svelte/transition';
-  import ErrorAlert from './ErrorAlert.svelte';
+<script lang="ts">
+    // import {auth, googleAuth} from "../services/firebase";
+    import {createEventDispatcher} from "svelte";
+    export let authMode: "login" | "register" = "register";
 
-  import {auth, googleAuth} from '../services/firebase';
-  const d = createEventDispatcher();
+    import Register from './Register.svelte';
+    import Login from './Login.svelte';
+    import { auth } from '../stores/store';
 
+    const { createWithEmailPassword, loginWithEmailPassword, loginWithGoogle, logout, user } = auth;
 
-  export let authMode: 'login' | 'register' = 'register';
-  let isAuthenticated = false;
-  let err: string | null = null;
+    let acceptTerms = false;
+    let err: string | null = null;
+    const d = createEventDispatcher();
 
-  function login(){
-    const email = (document.getElementById("l-email") as HTMLInputElement).value;
-    const password = (document.getElementById("l-password") as HTMLInputElement).value;
-
-    if(!email || !password){
-        err='Please fill out all fields.';
-        return;
-    }
-    err="";
-
-    auth.signInWithEmailAndPassword(email, password)
-        .then( () => {
-            d("done");
-            d("auth");
+    function login(email, password) {
+        // const email = (document.getElementById("l-email") as HTMLInputElement).value
+        // const password = (document.getElementById("l-password") as HTMLInputElement).value
+        if (!email || !password) {
+            err = "Fill out all fields!"
+            return;
+        }
+        err = "";
+        loginWithEmailPassword(email, password).then(() => {d("done"); d("auth")}).catch(e => {
+            err = `(${e.code}) ${e.message}`
         })
-        .catch(error=>{
-            err=`(${error.code}) ${error.message}`;
-        })
-  }
-
-  function register(){
-    const email = (document.getElementById("r-email") as HTMLInputElement).value;
-    const password = (document.getElementById("r-password") as HTMLInputElement).value;
-    const cpassword = (document.getElementById("r-cpassword") as HTMLInputElement).value;
-
-    if(!email || !password || !cpassword){
-        err = "Fill out all fields!";
-        return;
     }
-    if(password !== cpassword){
-        err="Password fields don't match!"
-        return;
-    }
-    err="";
-
-    // create the user
-    auth.createUserWithEmailAndPassword(email, password)
-        .then( ()=> {
-            d("done");
-            d("auth");
-            console.log(`user logged in!`)
+    
+    function register(email, password, cpassword) {
+        // const email = (document.getElementById("r-email") as HTMLInputElement).value
+        // const password = (document.getElementById("r-password") as HTMLInputElement).value
+        // const cpassword = (document.getElementById("r-cpassword") as HTMLInputElement).value
+        if (!email || !password || !cpassword) {
+            err = "Fill out all fields!"
+            return;
+        }
+        if (password !== cpassword) {
+            err = "Passwords don't match!"
+            return;
+        }
+        err = "";
+        createWithEmailPassword(email, password).then(() => {d("done"); d("auth")}).catch(e => {
+            err = `(${e.code}) ${e.message}`
         })
-        .catch(error => { err = `(${error.code}) ${error.message}` });
-  }
+    }
+  </script>
+  
 
-  function logout(){
-      if(auth.currentUser){
-          auth.signOut()
-              .then(()=>{
-                  d("done");
-                  d("logout");
-              })
-              .catch(error =>{
-                throw new Error(error)
-              })
-      }
-  }
-
-  function google(){
-      auth.signInWithPopup(googleAuth)
-          .then(()=>{
-              d("auth");
-              d("done");
-          })
-          .catch(error=>{
-              err = `(${error.code}) ${error.message}`;
-          })
-  }
-
-</script>
-
-<div class='w-2/5 mx-4 my-auto bg-indigo-100 rounded-lg shadow'>
-  {#if !isAuthenticated}
-  <div class="w3-container">
-      <h2 class="w3-center">{authMode === "login" ? "Login" : "Register"} to Serverless Chat</h2>
-  </div>
-  <div class="w3-container">
-      <div class="w3-bar w3-center w3-border-bottom w3-border-gray w3-text-dark-gray">
-          <button on:click={() => authMode = "login"} class="w3-bar-item w3-button w3-text-center {authMode === "login" && "w3-blue"}" style="width: 50%">LOGIN</button>
-          <button on:click={() => authMode = "register"} class="w3-bar-item w3-button w3-text-center {authMode === "register" && "w3-blue"}" style="width: 50%">REGISTER</button>
-      </div>
-      <!-- Email login/register forms -->
-      {#if authMode === "login"}
-          <form in:fade on:submit|preventDefault={login}>
-              {#if err}
-              <ErrorAlert message={err} />
-              {/if}
-              <h4>Login</h4>
-              <p>
-                  <label for="l-email">Email</label>
-                  <input type="email" class="w3-input w3-border" placeholder="Enter your email" id="l-email">
-              </p>
-              <p>
-                  <label for="l-password">Password</label>
-                  <input type="password" class="w3-input w3-border" placeholder="Enter your password" id="l-password">
-              </p>
-              <p>
-                  <button type="submit" class="w3-button w3-blue">Login</button>
-                  <button on:click={() => authMode = "register"} type="button" class="w3-button w3-light-gray">Register</button>
-              </p>
-          </form>
-      {:else}
-          <form in:fade on:submit|preventDefault={register}>
-              {#if err}
-              <ErrorAlert message={err} />
-              {/if}
-              <h4>Register</h4>
-              <p>
-                  <label for="r-email">Email</label>
-                  <input type="email" class="w3-input w3-border" placeholder="Enter your email" id="r-email">
-              </p>
-              <p>
-                  <label for="r-password">Password</label>
-                  <input type="password" class="w3-input w3-border" placeholder="Enter a password" id="r-password">
-              </p>
-              <p>
-                  <label for="r-cpassword">Confirm Password</label>
-                  <input type="password" class="w3-input w3-border" placeholder="Re-enter that password" id="r-cpassword">
-              </p>
-              <p>
-                  <button type="submit" class="w3-button w3-blue">Register</button>
-                  <button on:click={() => authMode = "login"} type="button" class="w3-button w3-light-gray">Login</button>
-              </p>
-          </form>
-      {/if}
-      <hr>
-      <p>
-          <button class="w3-button w3-blue" style="width: 100%" on:click={google}><i class="fab fa-google"></i> Sign in with Google</button>
-      </p>
+  {#if !$user}
+  <div class='w-full h-full flex flex-col items-center justify-center min-h-screen p-4 space-y-4 antialiased text-gray-900 bg-gray-100 dark:bg-dark dark:text-light'>
+      <main>
+        <div class="w-full max-w-sm px-4 py-6 space-y-6 bg-white rounded-md dark:bg-darker">
+          {#if authMode==='register'}
+            <Register bind:err={err} handleRegistration={register} registerViaGoogle={loginWithGoogle} />
+            <!-- Login link -->
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+              Already have an account? <a on:click|preventDefault={()=>{console.log(authMode); authMode='login'}} href="#!" class="text-blue-600 hover:underline">Login</a>
+            </div>
+          {:else }
+            <Login bind:err={err} handleLogin={login} loginViaGoogle={loginWithGoogle}/>
+            <!-- Register link -->
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                Don't have an account? <a on:click|preventDefault={()=>{console.log(authMode); authMode='register'}} href="#!" class="text-blue-600 hover:underline">Register</a>
+              </div>
+  
+          {/if}
+          </div>
+      </main>
   </div>
   {:else}
   <div class="w3-container">
-      <h2>Logged in</h2>
+    <h2>Logged in</h2>
   </div>
   <div class="w3-container">
-      <p class="w3-large w3-text-green w3-center"><i class="fas fa-check fa-5x"></i></p>
-      <p class="w3-center">Logged in</p>
-      <p>
-          <button class="w3-button w3-blue" style="width: 100%" on:click={logout}>Log out</button>
-      </p>
+    <p class="w3-large w3-text-green w3-center"><i class="fas fa-check fa-5x"></i></p>
+    <p class="w3-center">Logged in</p>
+    <p>
+      <button class="w3-button w3-blue" style="width: 100%" on:click={logout}>Log out</button>
+    </p>
   </div>
   {/if}
-</div>

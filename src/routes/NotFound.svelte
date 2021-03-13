@@ -1,7 +1,4 @@
 <script lang='ts'>
-import App from "../App.svelte";
-import Auth from "../components/Auth.svelte";
-
   export let params = {msg: ""};
 </script>
 
